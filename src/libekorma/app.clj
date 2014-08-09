@@ -1,7 +1,7 @@
 (ns libekorma.app
 	(:require [compojure.core :refer [defroutes ANY]]
 			  [liberator.core :refer [defresource]]
-			  [korma.core :refer [select insert values where]]
+			  [korma.core :refer [select insert values where delete]]
 			  [korma.db :refer [defdb]]
 			  [libekorma.util :as util]
 			  [libekorma.entities :refer [task]]))
@@ -34,14 +34,17 @@
 
 (defresource one-task-r [task-id]
 	:available-media-types ["application/json"]
-	:allowed-methods [:get]
+	:allowed-methods [:get :delete]
 	:exists?
 		(fn [_]
 			(if-let [task
 				(first (select task (where {:task_id task-id})))]
 				[true {:task task}]
 				[false {:message "Task not found"}]))
-
+	:delete!
+		(fn [{{task-id :task_id} :task}]
+			(delete task
+				(where {:task_id task-id})))
 	:handle-ok
 		(fn [{task :task}]
 			(util/to-json task)))
