@@ -5,7 +5,7 @@
 			  	[select insert values where delete update set-fields]]
 			  [korma.db :refer [defdb]]
 			  [libekorma.util :as util]
-			  [libekorma.entities :refer [task]]))
+			  [libekorma.entities :refer [task tag tasktag]]))
 
 (defdb dbconnection util/dbcon)
 
@@ -86,7 +86,50 @@
 		(fn [{task :task}]
 			(util/to-json task)))
 
+(defn post-task-tags [task-id tags]
+	(let [known-tags
+			(if (empty? tags)
+				[]
+				(select tag (where {:tag [in tags]})))
+		  known (set (map :tag known-tags))
+		  unknown (filter #(not (some #{%} known)) tags)]
+		  (do
+		  	(delete tasktag
+				(where {:task_id task-id}))
+		  	(if-not (empty? unknown)
+		  		(insert tag
+		  			(values (map (fn [t] {:tag t}) unknown))))
+		  	(let [created-tags
+		  			(select tag (where {:tag [in unknown]}))
+		  		  all-tags
+		  		  	(concat known-tags created-tags)]
+		  		  (if-not (empty? all-tags)
+			  		  (insert tasktag
+			  		  	(values
+			  		  		(map
+			  		  			(fn [{tag-id :tag_id}]
+			  		  				{:task_id task-id :tag_id tag-id})
+			  		  			all-tags))))))))	
+
+(defresource task-tags-r [task-id]
+	:available-media-types ["application/json"]
+	:allowed-methods [:post]
+	:malformed?
+		(fn [ctx]
+			[false {:tags (:tags (util/parse-json-body ctx))}])
+	:can-post-to-missing? false
+	:exists?
+		(fn [_]
+			(if-let [task (first (select task (where {:task_id task-id})))]
+				[true {:task task}]
+				[false {:message "Task not found"}]))
+	:post!
+		(fn [{tags :tags}]
+			(post-task-tags task-id tags)))
+
+
 (defroutes app
 	(ANY "/" [] "Hello, I am a cool service!")
 	(ANY "/tasks" [] tasks-r)
-	(ANY "/task/:task-id" [task-id] (one-task-r (Integer/parseInt task-id))))
+	(ANY "/task/:task-id" [task-id] (one-task-r (Integer/parseInt task-id)))
+	(ANY "/task/:task-id/tags" [task-id] (task-tags-r (Integer/parseInt task-id))))
