@@ -2,7 +2,7 @@
 	(:require [compojure.core :refer [defroutes ANY]]
 			  [liberator.core :refer [defresource]]
 			  [korma.core :refer
-				[select insert values where delete update set-fields with]]
+				[select insert values where delete update set-fields with join]]
 			  [korma.db :refer [defdb]]
 			  [libekorma.util :as util]
 			  [libekorma.entities :refer [task tag tasktag]]))
@@ -130,9 +130,29 @@
 		(fn [{tags :tags}]
 			(post-task-tags task-id tags)))
 
+(defresource tag-tasks-r [tag-word]
+	:available-media-types ["application/json"]
+	:allowed-methods [:get]
+	:exists?
+		(fn [_]
+			(if-let [tag-item
+				(first (select tag
+					(where {:tag tag-word})))]
+				[true {:tag tag-item}]
+				[false {:message "Unknown tag"}]))
+	:handle-ok
+		(fn [{{tag-id :tag_id} :tag}]
+			(util/to-json
+				(select task
+					(with tag)
+					(join tasktag
+						{:task_id :tasktag.task_id})
+					(where {:tasktag.tag_id tag-id})))))
+
 
 (defroutes app
 	(ANY "/" [] "Hello, I am a cool service!")
 	(ANY "/tasks" [] tasks-r)
 	(ANY "/task/:task-id" [task-id] (one-task-r (Integer/parseInt task-id)))
-	(ANY "/task/:task-id/tags" [task-id] (task-tags-r (Integer/parseInt task-id))))
+	(ANY "/task/:task-id/tags" [task-id] (task-tags-r (Integer/parseInt task-id)))
+	(ANY "/tag/:tag" [tag] (tag-tasks-r tag)))
