@@ -2,7 +2,7 @@
 	(:require [compojure.core :refer [defroutes ANY]]
 			  [liberator.core :refer [defresource]]
 			  [korma.core :refer
-			  	[select insert values where delete update set-fields]]
+				[select insert values where delete update set-fields with]]
 			  [korma.db :refer [defdb]]
 			  [libekorma.util :as util]
 			  [libekorma.entities :refer [task tag tasktag]]))
@@ -31,7 +31,7 @@
 				(insert task (values data))))
 	:handle-ok (fn [_]
 				(util/to-json
-					(select task))))
+					(select task (with tag)))))
 
 (defn task-update-request-malformed?
 	[{{method :request-method} :request :as ctx}]
@@ -53,7 +53,10 @@
 	:exists?
 		(fn [_]
 			(if-let [task
-				(first (select task (where {:task_id task-id})))]
+				(first
+					(select task
+						(with tag)
+						(where {:task_id task-id})))]
 				[true {:task task}]
 				[false {:message "Task not found"}]))
 	:delete!
