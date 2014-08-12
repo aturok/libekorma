@@ -4,6 +4,9 @@ This is a sample project whose only purpose is to show how one combines Liberato
 
 There is a post covering this topic at http://blog.alex-turok.com.
 
+###We start like###
+1. Very simple getting started instructions go here
+
 ###We have###
 1. Simple Korma entities representing DB objects in the app
 2. Demo data insertion through Korma, allowing to have some data as well as see very basic Korma stuff
