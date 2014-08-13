@@ -9,9 +9,6 @@
 
 (defdb dbconnection util/dbcon)
 
-(defn error [message]
-	{:message message})
-
 (defn tasks-request-malformed?
 	[{{method :request-method} :request :as ctx}]
 	(if (= :post method)
