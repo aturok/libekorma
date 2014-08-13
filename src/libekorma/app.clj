@@ -50,6 +50,26 @@
 			[true {:message "Invalid state after update"}]
 			false)))
 
+(defn update-task [{new-task :task-data old-task :task}]
+	(let [just-completed?
+			(and (true? (:is_done new-task))
+				 (false? (:is_done old-task)))
+		  just-cancelled?
+			(and (true? (:is_cancelled new-task))
+				 (false? (:is_cancelled old-task)))
+		  finished-time-dict
+			(if (or just-completed? just-cancelled?)
+				{:finished_time (util/cur-time)}
+				{})
+		  updated
+			(into finished-time-dict
+				(filter
+					(fn [[k _]] (#{:title :description :is_cancelled :is_done} k))
+					new-task))]
+		(update task
+			(set-fields updated)
+			(where {:task_id (:task_id old-task)}))))
+
 (defresource one-task-r [task-id]
 	:available-media-types ["application/json"]
 	:allowed-methods [:get :delete :put]
@@ -69,26 +89,7 @@
 	:can-put-to-missing? false
 	:malformed? task-update-request-malformed?
 	:conflict? task-update-conflict?
-	:put!
-		(fn [{new-task :task-data old-task :task}]
-			(let [just-completed?
-					(and (true? (:is_done new-task))
-						 (false? (:is_done old-task)))
-				  just-cancelled?
-					(and (true? (:is_cancelled new-task))
-						 (false? (:is_cancelled old-task)))
-				  finished-time-dict
-				  	(if (or just-completed? just-cancelled?)
-				  		{:finished_time (util/cur-time)}
-				  		{})
-				  updated
-				  	(into finished-time-dict
-				  		(filter
-				  			(fn [[k _]] (#{:title :description :is_cancelled :is_done} k))
-				  			new-task))]
-				(update task
-					(set-fields updated)
-					(where {:task_id (:task_id old-task)}))))
+	:put! update-task
 	:handle-ok
 		(fn [{task :task}]
 			(util/to-json task)))
