@@ -51,14 +51,14 @@
 			false)))
 
 (defn update-task [{new-task :task-data old-task :task}]
-	(let [just-completed?
-			(and (true? (:is_done new-task))
-				 (false? (:is_done old-task)))
-		  just-cancelled?
-			(and (true? (:is_cancelled new-task))
-				 (false? (:is_cancelled old-task)))
+	(let [just-finished?
+			(or
+				(and (:is_done new-task)
+					 (not (:is_done old-task)))
+				(and (:is_cancelled new-task)
+					 (not (:is_cancelled old-task))))
 		  finished-time-dict
-			(if (or just-completed? just-cancelled?)
+			(if just-finished?
 				{:finished_time (util/cur-time)}
 				{})
 		  updated
