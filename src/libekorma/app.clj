@@ -44,6 +44,12 @@
 					[false {:task-data task-data}]))
 		false))
 
+(defn task-update-conflict? [{new-task :task-data old-task :task}]
+	(let [combined (into old-task new-task)]
+		(if (and (:is_done combined) (:is_cancelled combined))
+			[true {:message "Invalid state after update"}]
+			false)))
+
 (defresource one-task-r [task-id]
 	:available-media-types ["application/json"]
 	:allowed-methods [:get :delete :put]
@@ -62,6 +68,7 @@
 				(where {:task_id task-id})))
 	:can-put-to-missing? false
 	:malformed? task-update-request-malformed?
+	:conflict? task-update-conflict?
 	:put!
 		(fn [{new-task :task-data old-task :task}]
 			(let [just-completed?
